@@ -411,6 +411,25 @@ class DagModelOperation(NamedTuple):
             )
         )
         return orm_dags
+    
+    def cleanup_unused_dags(self, dags: dict[str, MaybeSerializedDAG], *, session: Session) -> None:
+        # Retrieve all DAG IDs in the database for the current bundle
+        db_dag_ids = set(
+            session.scalars(
+                select(DagModel.dag_id).where(DagModel.bundle_name == self.bundle_name)
+            )
+        )
+ 
+        active_dag_ids = {dag.dag_id for dag in dags}
+        log.info("\nDB DAGs detected: %s\n", db_dag_ids)
+        log.info("\nFolder DAGs detected: %s\n", active_dag_ids)
+ 
+        # Find DAGs to disable
+        dags_to_remove = db_dag_ids - active_dag_ids
+        if dags_to_remove:
+            log.info("Disabling DAGs no longer detected: %s", dags_to_remove)
+            session.query(DagModel).filter(DagModel.dag_id.in_(dags_to_remove)).update({"is_active": False})
+            session.commit()
 
     def update_dags(
         self,

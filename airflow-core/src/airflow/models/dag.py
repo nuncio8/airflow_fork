@@ -1899,6 +1899,7 @@ class DAG(TaskSDKDag, LoggingMixin):
             bundle_name=bundle_name, bundle_version=bundle_version, dags={d.dag_id: d for d in dags}
         )  # type: ignore[misc]
 
+        dag_op.cleanup_unused_dags(dags, session=session) 
         orm_dags = dag_op.add_dags(session=session)
         dag_op.update_dags(orm_dags, session=session)
 
